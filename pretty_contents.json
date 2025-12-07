@@ -1,0 +1,18 @@
+{
+    "content" : ["Netflix login: %password% (don't forget to cancel subscription)",
+                      "Amazon password: %password% - for mom's prime account",
+                      "Steam password: %password% // needed for summer sale!",
+                      "PayPal pass: %password% - linked to main card",
+                      "Instagram backup password: %password% write it down here",
+                      "Spotify family plan password: %password% shared with Alex",
+                      "Facebook password: %password% // old account, need to deactivate",
+                      "Bank of America temporary pass: %password% CHANGE SOON",
+                      "Twitter (X) password: %password% for the marketing account",
+                      "Walmart+ password: %password% free delivery",
+                      "Microsoft Office 365: %password% - shared with family",
+                      "eBay password: %password% // remember to leave feedback",
+                      "Discord nitro password: %password% expires next month",
+                      "Adobe Creative Cloud: %password% billing on 15th",
+                      "Zoom pro account password: %password% meeting ID 550"
+                    ]
+}

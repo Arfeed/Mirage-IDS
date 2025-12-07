@@ -1,0 +1,23 @@
+{
+    "local" : ["passwords.txt",
+                "credentials.txt",
+                "secret_keys.txt",
+                "backup_codes.txt",
+                "admin_passwords.txt",
+                "users.txt",
+                "ssh_keys.txt",
+                "database.txt",
+                "config.txt",
+                "notes.txt",
+                "todo.txt",
+                "log.txt",
+                "error.log.txt",
+                "access_tokens.txt",
+                "api_keys.txt",
+                "backup_contacts.txt",
+                "salary.txt",
+                "financial.txt",
+                "vpn_config.txt",
+                ".env.txt"],
+    "net" : [31457, 54320, 6379, 511, 669, 2000, 79, 27017]
+}

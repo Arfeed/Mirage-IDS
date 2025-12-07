@@ -22,12 +22,14 @@ if __name__ == '__main__':
     
     if modules == 'local':
         localm = LocalMonitor()
-        localh = LocalHoneypots()
+        localh = LocalHoneypots(localm)
 
+        print(localm.check())
+        localh.place_beartraps()
         while True:
             print(localm.check())
-            #print(localm.primary_stats)
-            time.sleep(0.5)
+            time.sleep(1)
+
 
     else:
         pass

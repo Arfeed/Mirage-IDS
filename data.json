@@ -1,0 +1,26 @@
+{
+    "tvaluable":[
+        {
+            "dirs":[
+                "C:\\Windows\\System32\\Tasks",
+                "C:\\Users\\%username%\\AppData\\Local\\Microsoft\\Vault",
+                "D:\\.Trash-1000"
+            ],
+            "files":[
+                "C:\\Windows\\System32\\config\\DEFAULT",
+                "C:\\Windows\\System32\\config\\SYSTEM",
+                "C:\\Windows\\System32\\drivers\\etc\\hosts",
+                "C:\\Windows\\System32\\config\\SECURITY",
+                "C:\\Users\\%username%\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data",
+                "C:\\Users\\%username%\\NTUSER.DAT",
+                "C:\\Users\\%username%\\data.txt"
+            ],
+            "logs":[
+                "C:\\Windows\\System32\\winevt\\Logs",
+                "D:\\.Trash-1000"
+            ]
+        }
+    ],
+
+    "beartraps_local":[]
+}

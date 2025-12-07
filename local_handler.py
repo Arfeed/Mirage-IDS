@@ -2,9 +2,12 @@ import os
 from json import load
 from hashlib import md5
 
+from analyzer import Analyzer
+
 class LocalMonitor:
     '''Monitor for local files(and processes(?) soon)'''
     def __init__(self):
+        self.analyzer = Analyzer()
         self.__determine_vals()
         self.__set_primary_stats()
     
@@ -18,7 +21,7 @@ class LocalMonitor:
                 self.__valuables[k][i] = self.__valuables[k][i].replace('%username%', os.getlogin())
 
     def __set_primary_stats(self) -> None:
-        '''Sets primary values of all files'''
+        '''Sets primary values of all valuables'''
         self.primary_stats : dict = {}
         for k in self.__valuables.keys():
             self.primary_stats[k] = []
@@ -73,13 +76,11 @@ class LocalMonitor:
             try:
                 if os.stat(file).st_atime != self.primary_stats['files'][i][1]:
                     suspects.append(i)
-                    print('t', os.stat(file).st_atime, self.primary_stats['files'][i][1])
                     continue
 
                 with open(file, 'rb') as data:
                     if md5(data.read()).digest().hex() != self.primary_stats['files'][i][0].digest().hex():
                         suspects.append(i)
-                        print('h', i)
 
             except FileExistsError:
                 continue
@@ -125,8 +126,7 @@ class LocalMonitor:
         for k in self.__valuables.keys():
             suspects_map[k] = options[k]()
 
-        if suspects_map['logs'] == [] and suspects_map['dirs'] == [] and suspects_map['files'] == []:
-            self.__set_primary_stats()
+        self.__set_primary_stats()
 
         return suspects_map
 

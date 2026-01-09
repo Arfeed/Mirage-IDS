@@ -1,10 +1,8 @@
-import colorama, time
-from local_handler import LocalMonitor,LocalHoneypots
-from net_handler import NetMonitor, NetHoneypots
+import sys, os
+import configparser
 
-#start file
-
-logo = """
+def show_logo() -> None:
+    logo = """
 ███╗   ███╗ ██╗ ██████╗   █████╗   ██████╗  ███████╗
 ████╗ ████║ ██║ ██╔══██╗ ██╔══██╗ ██╔════╝  ██╔════╝
 ██╔████╔██║ ██║ ██████╔╝ ███████║ ██║  ███╗ █████╗  
@@ -12,34 +10,107 @@ logo = """
 ██║ ╚═╝ ██║ ██║ ██║  ██║ ██║  ██║ ╚██████╔╝ ███████╗
 ╚═╝     ╚═╝ ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝  ╚══════╝
 """
-
-#only placeholders for now
-if __name__ == '__main__':
-    print(logo, end='')
-    print('Mirage v1.0')
-    print('https://github.com/Arfeed/Mirage-IDS\n\n')
-    modules = 'local'#input('choose module(local, net, all): ')
-    
-    if modules == 'local':
-        localm = LocalMonitor()
-        localh = LocalHoneypots(localm)
-
-        print(localm.check())
-        localh.place_beartraps()
-        while True:
-            print(localm.check())
-            time.sleep(1)
-
-
+    if os.name == 'nt':
+        os.system('cls')
     else:
-        pass
-    '''if modules == 'local':
-        netm = NetMonitor()
-        neth = NetHoneypots()
-    
-    if modules == 'all':
-        localm = LocalMonitor()
-        localh = LocalHoneypots()
-        netm = NetMonitor()
-        neth = NetHoneypots()'''
+        os.system('clear')
 
+    print(logo, end='')
+    print('[*] Mirage v1.0')
+    print('[*] https://github.com/Arfeed/Mirage-IDS\n\n')
+
+def launch_module(mod_path, module) -> None:
+    if os.name == 'nt':
+        args = ['start', 'cmd', '/k', 'python', os.path.abspath('./module_handler.py'), f'"{os.path.abspath(mod_path)}"', f'"{module}"']
+        os.system(' '.join(args))
+    else:
+        args = ['gnome-terminal', '--', 'python3', os.path.abspath('./module_handler.py'), f'"{os.path.abspath(mod_path)}"', f'"{module}"']
+        os.system(' '.join(args))
+
+def read_config() -> str:
+    print('[!] Reading config...')
+    
+    try:
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        modules_path = config['paths']['modules_path']
+    except FileNotFoundError:
+        print('[@] Config file not found, exit')
+        sys.exit()
+    except PermissionError:
+        print('[@] Config cannot be read because of permissions, exit')
+        sys.exit()
+    except KeyError:
+        print('[@] Invalid config format, exit')
+        sys.exit()
+
+    print(f'[*] Config read successfully, modules path: {modules_path}\n')
+    return modules_path
+
+def search_modules(modules_path : str) -> list[str]:
+    print(f'[!] Search for modules in "{modules_path}" directory ...')
+
+    modules = os.listdir(modules_path)
+    if len(modules) != 0:
+        if '__pycache__' in modules:
+            modules.pop(modules.index('__pycache__'))
+    
+    if modules:
+        print('[*] Found modules:', ', '.join(modules), '\n')
+        return modules
+    else:
+        print('[@] No modules found, exit')
+        sys.exit()
+
+def module_select(modules : list[str]) -> list:
+    m_indexes = ', '.join([f'{i} - {modules[i]}' for i in range(len(modules))])
+    selected_module = int(input(f'[?] Which modules would you like to use? Write index({m_indexes}): '))
+
+    try:
+        selected_module = modules[selected_module]
+        print(f'[*] Selected module:', selected_module, '\n')
+        return selected_module
+    except (ValueError, IndexError):
+        print('[@] Invalid index, try again\n')
+        return []
+
+def appelation(mod_path, module) -> None:
+    ans = ''
+    while ans != 'y' and ans != 'n':
+        ans = input('[?] Are you sure that you want to run this module(y/n)?: ')
+
+    if ans == 'y':
+        print('[!] Launching module...')
+        launch_module(mod_path, module)
+        print('[*] Module launched successfully')
+
+        ans = ''
+        while ans != 'y' and ans != 'n':
+            ans = input('[?] Want to launch another module(y/n)?: ')
+        
+        if ans == 'y':
+            return
+        
+        else:
+            print('[@] Exit')
+            sys.exit()
+    else:
+        print('[@] Module wont launch, exit')
+        sys.exit()
+
+def main():
+    run = True
+    while run:
+        show_logo()
+        
+        mod_path = read_config()
+        modules = search_modules(mod_path)
+        
+        selected_module = []
+        while selected_module == []:
+            selected_module = module_select(modules)
+        
+        appelation(mod_path, selected_module)
+
+if __name__ == '__main__':
+    main()

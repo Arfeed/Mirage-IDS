@@ -1,0 +1,25 @@
+{
+    "valuable":[
+        {
+            "dirs":[
+                "C:\\Windows\\System32\\Tasks",
+                "C:\\Users\\%username%\\AppData\\Local\\Microsoft\\Vault",
+                "D:\\.Trash-1000"
+            ],
+            "files":[
+                "C:\\Windows\\System32\\config\\DEFAULT",
+                "C:\\Windows\\System32\\config\\SYSTEM",
+                "C:\\Windows\\System32\\config\\SECURITY",
+                "C:\\Users\\%username%\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data",
+                "C:\\Users\\%username%\\NTUSER.DAT",
+                "D:\\.Trash-1000\\data.txt"
+            ],
+            "logs":[
+                "C:\\Windows\\System32\\winevt\\Logs"
+            ]
+        }
+    ],
+    "bt_places" : [
+        "./"
+    ]
+}

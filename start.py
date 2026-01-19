@@ -1,7 +1,7 @@
 import sys, os
 import configparser
 
-def show_logo() -> None:
+def show_logo() -> int:
     logo = """
 ███╗   ███╗ ██╗ ██████╗   █████╗   ██████╗  ███████╗
 ████╗ ████║ ██║ ██╔══██╗ ██╔══██╗ ██╔════╝  ██╔════╝
@@ -18,14 +18,17 @@ def show_logo() -> None:
     print(logo, end='')
     print('[*] Mirage v1.0')
     print('[*] https://github.com/Arfeed/Mirage-IDS\n\n')
+    return 0
 
-def launch_module(mod_path, module) -> None:
+def launch_module(mod_path, module) -> int:
     if os.name == 'nt':
         args = ['start', 'cmd', '/k', 'python', os.path.abspath('./module_handler.py'), f'"{os.path.abspath(mod_path)}"', f'"{module}"']
         os.system(' '.join(args))
+        return 0
     else:
         args = ['gnome-terminal', '--', 'python3', os.path.abspath('./module_handler.py'), f'"{os.path.abspath(mod_path)}"', f'"{module}"']
         os.system(' '.join(args))
+        return 0
 
 def read_config() -> str:
     print('[!] Reading config...')
@@ -74,7 +77,7 @@ def module_select(modules : list[str]) -> list:
         print('[@] Invalid index, try again\n')
         return []
 
-def appelation(mod_path, module) -> None:
+def appelation(mod_path, module) -> int:
     ans = ''
     while ans != 'y' and ans != 'n':
         ans = input('[?] Are you sure that you want to run this module(y/n)?: ')
@@ -89,7 +92,7 @@ def appelation(mod_path, module) -> None:
             ans = input('[?] Want to launch another module(y/n)?: ')
         
         if ans == 'y':
-            return
+            return 0
         
         else:
             print('[@] Exit')

@@ -3,14 +3,13 @@ from json import load
 from hashlib import md5
 from random import randint, choice, shuffle
 
-from analyzer import Analyzer
 
 
 class LocalHandler:
     '''Abstract class for local handlers'''
     def __init__(self):
-        self.username = os.getlogin()
-        self.windows_replacement_table = {
+        self.username : str = os.getlogin()
+        self.windows_replacement_table : dict = {
             '%username%': self.username,
             '%userprofile%' : f'C:\\Users\\{self.username}',
             '%appdata%' : f'C:\\Users\\{self.username}\\AppData\\Roaming',
@@ -23,31 +22,35 @@ class LocalHandler:
         '''Verifys path with its type'''
         if os.path.exists(path):
             if type == 'files' and os.path.isfile(path):
-                return 1
+                return True
             elif (type == 'dirs' or type == 'logs') and os.path.isdir(path):
-                return 1
-            else:
-                return 0
-            
-        return 0
+                return True
+        
+        return False
 
-    def insert_data_win(self, path : str) -> str:
+    def format_path(self, path : str) -> str:
         '''Inserts system data in path with replace table'''
-        res = path
-        for k, v in self.windows_replacement_table.items():
-            res = res.replace(k, v)
-        return res
+        if os.name == 'nt':
+            res = path
+            for k, v in self.windows_replacement_table.items():
+                res = res.replace(k, v)
+
+            return res
+        else:
+            return path     
+
 
 
 class LocalMonitor(LocalHandler):
-    '''Monitor for local files(and processes(?) soon)'''
+    '''Monitor for local files(and processes(?) soon). Argument config_path sets path to config .json file with dirs, files and logs to monitor.'''
     def __init__(self, 
-                 config_path : str='./data.json'):
+                 config_path : str='./data/data.json'):
         super().__init__()
-        self.config_path = config_path
+        self.config_path : str = config_path
+        self.UNAVAILABLE_FILE : tuple = (0,0,0,0)
 
-        self.__valuables  = {}
-        self.primary_stats  = {}
+        self.__valuables : dict[str : list] = {}
+        self.primary_stats : dict[str : list] = {}
 
         self.__determine_vals()
         self.reset_primary_stats()
@@ -60,16 +63,16 @@ class LocalMonitor(LocalHandler):
 
         try:
             with open(self.config_path, 'r') as data:
-                self.__valuables = load(data)['tvaluable'][0]
+                self.__valuables = load(data)['valuable'][0]
         except KeyError:
             print('invalid file format or file does not exists, quit')
-            return 1
+            return 
 
         for k in self.__valuables.keys():#clear and verify paths
             pack = []
 
             for i in range(len(self.__valuables[k])):
-                clear_path = self.insert_data_win(self.__valuables[k][i])
+                clear_path = self.format_path(self.__valuables[k][i])
                 if self.verify_path(clear_path, k):
                     pack.append(clear_path)
 
@@ -86,16 +89,16 @@ class LocalMonitor(LocalHandler):
             return md5_hash.hexdigest()
         
         except (IOError, OSError) as e:
-            return 0
+            return ''
 
     def __check_logs(self) -> list:
         '''Checks valuable logs'''
         suspects = []
 
-        for i, file in enumerate(self.__valuables['logs']):
+        for i, log in enumerate(self.__valuables['logs']):
             try:
-                if len(os.listdir(file)) < self.primary_stats['logs'][i][0]:
-                    suspects.append(i)
+                if len(os.listdir(log)) < self.primary_stats['logs'][i][0]:
+                    suspects.append(self.__valuables['logs'][i])
             
             except FileExistsError:
                 continue
@@ -108,15 +111,21 @@ class LocalMonitor(LocalHandler):
         '''Checks valuable files'''
         suspects = []
         for i, file in enumerate(self.__valuables['files']):
-            if self.primary_stats['files'][i] == (0, 0, 0, 0):
+            if self.primary_stats['files'][i] == self.UNAVAILABLE_FILE:
                 continue
 
             try:
-                if os.stat(file).st_atime != self.primary_stats['files'][i][1]:
-                    suspects.append(i)
+                if os.path.getatime(file) != self.primary_stats['files'][i][1]:
+                    suspects.append(self.__valuables['files'][i])
 
-                elif self.__calculate_hash(file) != self.primary_stats['files'][i][0]:
-                    suspects.append(i)
+                elif os.path.getmtime(file) != self.primary_stats['files'][i][2] or \
+                    os.path.getsize(file) != self.primary_stats['files'][i][3]:
+
+                    if self.__calculate_hash(file) != self.primary_stats['files'][i][0]:
+                        suspects.append(self.__valuables['files'][i])
+                        continue
+
+                    suspects.append(self.__valuables['files'][i])
 
             except FileExistsError:
                 continue
@@ -125,26 +134,31 @@ class LocalMonitor(LocalHandler):
         
         return suspects
 
-    def __check_dirs(self) -> list:
+    def __check_dirs(self, delay) -> list:
         '''Checks valuable dirs'''
         suspects = []
 
         for i, dir in enumerate(self.__valuables['dirs']):
             try:
-                if os.path.getmtime(dir) != self.primary_stats['dirs'][i][1]:
-                    suspects.append(i)
+                if int(os.path.getatime(dir)-self.primary_stats['dirs'][i][0])!=delay:
+                    suspects.append(self.__valuables['dirs'][i])
+
+                elif os.path.getmtime(dir) != self.primary_stats['dirs'][i][1]:
+                    suspects.append(self.__valuables['dirs'][i])
                     
-            except (FileExistsError, PermissionError):
+            except FileExistsError:
+                continue
+            except PermissionError:
                 continue
 
         return suspects
 
 
-    def get_valuables(self) -> dict[str : list]:
+    def get_valuables(self) -> dict[str, list]:
         '''Returns current monitor valuables''' 
         return self.__valuables
     
-    def set_valuables(self, new : dict[str : list]) -> None:
+    def set_valuables(self, new : dict[str, list]) -> None:
         '''Sets new valuables''' 
         self.__valuables = new
         self.reset_primary_stats()
@@ -189,10 +203,10 @@ class LocalMonitor(LocalHandler):
                             self.primary_stats[k].append(pack)
                     
                     except (FileExistsError, PermissionError, OSError, FileNotFoundError):
-                        if k == 'files': self.primary_stats[k].append((0, 0, 0, 0))
+                        if k == 'files': self.primary_stats[k].append(self.UNAVAILABLE_FILE)
                         else: self.primary_stats[k].append(0)
 
-    def check(self) -> dict[str : list]:
+    def check(self, delay : int = 1) -> dict[str : list]:
             '''Checks valuables stats'''
             options = {
                 'logs':self.__check_logs,
@@ -203,6 +217,9 @@ class LocalMonitor(LocalHandler):
             suspects_map = {}
 
             for k in self.__valuables.keys():
+                if k == 'dirs':
+                    suspects_map[k] = options[k](delay)
+                    continue
                 suspects_map[k] = options[k]()
 
             self.reset_primary_stats()
@@ -210,29 +227,25 @@ class LocalMonitor(LocalHandler):
             return suspects_map
 
 
+
 class LocalHoneypots(LocalHandler):
     '''Honeypots manager for local machine'''
-    def __init__(self, monitor : LocalMonitor, 
-                 names_path : str = './pretty_objects.json',
-                 content_path : str = './pretty_contents.json',
-                 paths_path : str = './data.json',
-                 gen_path : str = './gen_ex.txt'):
+    def __init__(self, names_path : str = './data/pretty_objects.json',
+                 content_path : str = './data/pretty_contents.json',
+                 gen_path : str = './data/gen_ex.txt',
+                 paths_path : str = './data/data.json'):
         super().__init__()
-        self.localm = monitor
+        self.RANDOM_BORDER = 4096
 
-        self.pretty_names = {}
-        self.pretty_content = []
-        self.pretty_paths = []
-        
+        self.pretty_names : list = []
+        self.pretty_content : list = []
+        self.pretty_paths : list = []
+        self.current_honeypots : list = []
 
-        self.load_paths(names_path,
+        self.set_paths(names_path,
                         content_path, 
                         paths_path, 
                         gen_path)
-        self.__cache_gen_ex()
-        self.__set_pretty_objects()
-        self.__set_pretty_content()
-        self.__set_pretty_paths()
     
     def __set_pretty_objects(self) -> None:
         '''Parses .json file and gets pretty names'''
@@ -244,7 +257,7 @@ class LocalHoneypots(LocalHandler):
                 self.pretty_names = load(file)['local']
         except KeyError:
             print('invalid file format, quit')
-            return 1
+            return 
 
     def __set_pretty_content(self) -> None:
         '''Parses .json file and gets pretty content'''
@@ -256,7 +269,7 @@ class LocalHoneypots(LocalHandler):
                 self.pretty_content = load(file)['content']
         except KeyError:
             print('invalid file format, quit')
-            return 1
+            return 
     
     def __set_pretty_paths(self) -> None:
         '''Parses .json data to get paths, verifys and insert data in it'''
@@ -268,11 +281,11 @@ class LocalHoneypots(LocalHandler):
                 self.pretty_paths = load(file)['bt_places']
         except KeyError:
             print('invalid file format, quit') 
-            return 1
+            return 
         
         pack = []
         for path in self.pretty_paths:#clear and verify path
-            clear_path = self.insert_data_win(path)
+            clear_path = self.format_path(path)
             if self.verify_path(clear_path, 'dirs'):
                 pack.append(clear_path)
 
@@ -287,8 +300,8 @@ class LocalHoneypots(LocalHandler):
         '''Generates fake password for beartrap'''
         components = []
 
-        components.append(str(randint(0, 4096)))
-        components.append(hex(randint(0, 4096))[2:])
+        components.append(str(randint(0, self.RANDOM_BORDER)))
+        components.append(hex(randint(0, self.RANDOM_BORDER))[2:])
         components.append(choice(self.gen_cache))
         
         shuffle(components)
@@ -298,32 +311,48 @@ class LocalHoneypots(LocalHandler):
         '''Inserts pretty content into string'''
         return content.replace('%password%', self.__make_fpasswd())
 
-    def load_paths(self, names_path : str = '',
+
+    def set_paths(self, names_path : str = '',
                 content_path : str = '',
                  paths_path : str = '',
                  gen_path : str = ''):
-        '''Loads paths to data files'''
+        '''Loads paths to data files. If path argument is not defined, it wont change.'''
 
-        if names_path: self.names_path = names_path
+        if names_path:self.names_path = names_path
         if content_path: self.content_path = content_path
-        if paths_path: self.paths_path = paths_path
+        if paths_path : self.paths_path = paths_path
         if gen_path: self.gen_path = gen_path
 
         self.__set_pretty_objects()
         self.__set_pretty_content()
         self.__set_pretty_paths()
+        self.__cache_gen_ex()
 
-    def place_beartraps(self, amount : int = 3) -> dict:
-        '''Places random amount of beartraps with pretty names'''
-        new_valuables = self.localm.get_valuables()
+    def get_paths(self) -> tuple:
+        ''' Returns current config paths'''
+        return (self.names_path,
+                self.content_path,
+                self.paths_path,
+                self.gen_path)
+
+    def is_honeypot(self, path : str) -> bool:
+        '''Checks, if object placed in path is a honeypot'''
+        if path in self.current_honeypots:
+            return True
+        return False
+
+
+    def place_honeypots(self, monitor : LocalMonitor, amount : int = 3) -> list:
+        '''Places beartraps with pretty names and reutrns their paths'''
+        new_valuables = monitor.get_valuables()
         out = []
 
-        for i in range(amount):
+        for _ in range(amount):
             name = choice(self.pretty_names)
             content = choice(self.pretty_content)
             path = choice(self.pretty_paths)
 
-            full_path = f'{path}\\{name}'
+            full_path = os.path.join(path, name)
 
             with open(full_path, 'w') as file:
                 file.write(self.__insert_passwd(content))
@@ -331,6 +360,8 @@ class LocalHoneypots(LocalHandler):
             out.append(full_path)
             new_valuables['files'].append(full_path)
         
-        self.localm.set_valuables(new_valuables)
-        self.localm.reset_primary_stats()
+        monitor.set_valuables(new_valuables)
+        monitor.reset_primary_stats()
+        self.current_honeypots = out
+
         return out
